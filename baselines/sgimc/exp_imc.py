@@ -29,7 +29,7 @@ from sgimc.utils import load, save
 warnings.simplefilter("ignore", TqdmSynchronisationWarning)
 
 PATH_TO_EXP = ''
-PATH_DATA = os.path.join(PATH_TO_EXP, 'data/n_instances')
+PATH_DATA = os.path.join(PATH_TO_EXP, 'data')
 
 PATH_ARCHIVE = os.path.join(PATH_DATA, "arch_imc")
 if not os.path.isdir(PATH_ARCHIVE):
