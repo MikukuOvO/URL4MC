@@ -1,2 +1,4 @@
 baselines/sgimc/sgimc/
 baselines/sgimc/data/
+baselines/lin-rfm/__pycache__/
+baselines/csmc/examples/
