@@ -90,8 +90,10 @@ def main(n_1, n_2, r, m):
         np.linalg.norm(X - M, "fro") / np.linalg.norm(M, "fro"))
     print("|X-M|_F/|M|_F:", frobenius_norm_ratio)  # the metric of paper.
 
+    print(np.linalg.norm(X[mask] - M[mask]) / np.linalg.norm(M[mask]))
+
 
 if __name__ == '__main__':
-    n = 20
-    p = 0.8
+    n = 7
+    p = 0.2
     main(n, n, r=2, m=int(n * n * p))

@@ -63,8 +63,10 @@ def linear_rfm(Y, unmasked, num_iters, reg=1e-1,
             break
         if error < 1e-1:
             reg = min(reg, 1e-3)
+    
+    approx_err = np.linalg.norm(Y[~unmasked] - out[~unmasked]) / np.linalg.norm(Y[~unmasked])
 
     if return_out:
         return out, best_error
     else:
-        return best_error
+        return approx_err

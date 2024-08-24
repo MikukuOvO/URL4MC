@@ -17,12 +17,12 @@ n_cols = 1000
 
 ranks = [10]
 
-n_trials = 20
+n_trials = 5
 
 c_rates = [i * 0.1 for i in range(1, 10)]
 
-# missing_rates = [i * 0.1 for i in range(1, 10)]
-missing_rates = [0.8]
+missing_rates = [i * 0.1 for i in range(1, 10)]
+# missing_rates = [0.8]
 lib = "torch"
 
 log_name = "synthetic_benchmark"
@@ -37,19 +37,20 @@ def evaluate(M_filled, M, missing_mask):
     return [approx_err_, approx_err_unknown_, nmae_unknown_, success, snr_]
 
 
-for trial in range(5):
+for trial in range(n_trials):
     print(f'Starting trial {trial}')
     for fraction_missing in missing_rates:
+        print(f'Missing rates {fraction_missing}')
         for rank in ranks:
             print(f'Rank {rank}')
             M, M_incomplete, omega, ok_mask = create_rank_k_dataset(n_rows=n_rows, n_cols=n_cols, k=rank,
                                                                     gaussian=True,
                                                                     fraction_missing=fraction_missing,
-                                                                    noise=0.3)
-            # Convert to PyTorch tensors and move to device 2
-            M = torch.tensor(M, dtype=torch.float64).to(device)
-            M_incomplete = torch.tensor(M_incomplete, dtype=torch.float64).to(device)
-            ok_mask = torch.tensor(ok_mask, dtype=torch.bool).to(device)
+                                                                    noise=0.3, numlib=lib)
+            
+            M = M.to(device)
+            M_incomplete = M_incomplete.to(device)
+            ok_mask = ok_mask.to(device)
             
             M_incomplete_tmp = M_incomplete.clone()
             M_incomplete_tmp[~ok_mask] = 0

@@ -61,7 +61,7 @@ def dls(X: T, ok_mask: T, C: T) -> T:
     else:
         cuda_support = torch.cuda.is_available()
         device = torch.device("cuda:2") if cuda_support else torch.device("cpu")
-        Y = torch.zeros((k, n), dtype=torch.float64, device=device)
+        Y = torch.zeros((k, n), dtype=torch.float32, device=device)
         _dls_torch(X, ok_mask, C, Y, n, cuda_support)
     return C @ Y
 

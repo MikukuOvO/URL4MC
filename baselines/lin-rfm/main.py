@@ -15,12 +15,12 @@ torch.cuda.manual_seed(SEED)
 
 def main():
 
-    d = 500
-    r = 5
+    d = 7
+    r = 2
 
     NUM_RFM_ITERS = 3000
 
-    num_obs = 10000
+    num_obs = 35
     reg = 5e-2
 
     Y, unmasked = get_data(d, r, num_obs)
