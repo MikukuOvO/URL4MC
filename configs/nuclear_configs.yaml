@@ -1,2 +1,6 @@
 synthetic:
-  lr: 0.001
+  num_nodes: 7
+  rank_k: 2
+  missing_rate: 0.3
+  num_epochs: 20000
+  train_ratio: 0.7
