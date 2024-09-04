@@ -1,75 +1,106 @@
 import os
 import numpy as np
 import torch
-from torch.utils.data import Dataset
-from torch.utils.data import random_split
+import torchvision.transforms as transforms
+import torchvision
+from torch.utils.data import Dataset, DataLoader
+from torchvision.transforms import ToTensor, Compose, Normalize, RandomResizedCrop
 
-class SyncDataset(Dataset):
-    def __init__(self, num_samples, num_nodes, rank_k, missing_rate=0.1):
+
+class ColumnwiseDataset(Dataset):
+    def __init__(self, num_nodes, num_features, rank_k, missing_rate=0.1, seed=42):
         self.datasetname = "synthetic"
-        self.num_samples = num_samples
         self.num_nodes = num_nodes
+        self.num_features = num_features
         self.rank_k = rank_k
         self.missing_rate = missing_rate
-        self.dataset = self._load_or_create_dataset()
+        self.seed = seed
+        np.random.seed(seed)
+        self.load_or_generate()
 
-    def _load_sync_data(self):
-        U = np.random.randn(self.num_nodes, self.rank_k)
-        V = np.random.randn(self.rank_k, self.num_nodes)
-        true_matrix = np.dot(U, V)
-        missing_mask = np.random.rand(self.num_nodes, self.num_nodes) < self.missing_rate
-        feature_matrix = true_matrix.copy()
-        feature_matrix[missing_mask] = 0
-        return true_matrix, feature_matrix, missing_mask
-
-    def _create_dataset(self):
-        return [self._load_sync_data() for _ in range(self.num_samples)]
+    def load_or_generate(self):
+        dataset_path = self._get_dataset_path()
+        if os.path.exists(dataset_path):
+            print(f"加载数据集：{dataset_path}")
+            self.load_dataset(dataset_path)
+        else:
+            print(f"在 {dataset_path} 未找到数据集，正在生成新数据集")
+            self.generate()
+            self.save_dataset(dataset_path)
 
     def _get_dataset_path(self):
         return os.path.join("dataset", self.datasetname, 
-                            f"{self.datasetname}_{self.num_samples}_{self.num_nodes}_{self.rank_k}_{self.missing_rate}.npz")
+                            f"{self.datasetname}_{self.num_nodes}_{self.num_features}_{self.rank_k}_{self.missing_rate}.pt")
 
-    def _load_or_create_dataset(self):
-        dataset_path = self._get_dataset_path()
-        
-        if os.path.exists(dataset_path):
-            print(f"Loading dataset from {dataset_path}")
-            return self._load_dataset(dataset_path)
-        else:
-            print(f"No dataset found at {dataset_path}, creating a new one")
-            dataset = self._create_dataset()
-            self._save_dataset(dataset, dataset_path)
-            return dataset
+    def generate(self):
+        U = np.random.randn(self.num_nodes, self.rank_k).astype(np.float32)
+        V = np.random.randn(self.rank_k, self.num_features).astype(np.float32)
+        true_matrix = np.dot(U, V)
+        missing_mask = (np.random.rand(self.num_nodes, self.num_features) < self.missing_rate).astype(np.float32)
+        feature_matrix = true_matrix.copy()
+        feature_matrix[missing_mask.astype(bool)] = 0
 
-    def _load_dataset(self, filename):
-        loaded_data = np.load(filename, allow_pickle=True)
-        return [
-            (torch.tensor(item[0], dtype=torch.float32),
-             torch.tensor(item[1], dtype=torch.float32),
-             torch.tensor(item[2], dtype=torch.bool))
-            for item in loaded_data['data']
-        ]
+        self.true_matrix = torch.from_numpy(true_matrix)
+        self.feature_matrix = torch.from_numpy(feature_matrix)
+        self.missing_mask = torch.from_numpy(missing_mask)
 
-    def _save_dataset(self, dataset, filename):
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        np.savez_compressed(filename, data=dataset)
-        print(f"New dataset saved at {filename}")
+    def save_dataset(self, path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        torch.save({
+            'true_matrix': self.true_matrix,
+            'feature_matrix': self.feature_matrix,
+            'missing_mask': self.missing_mask
+        }, path)
+        print(f"新数据集已保存至 {path}")
+
+    def load_dataset(self, path):
+        data = torch.load(path)
+        self.true_matrix = data['true_matrix']
+        self.feature_matrix = data['feature_matrix']
+        self.missing_mask = data['missing_mask']
+
+    def __getitem__(self, index):
+        return (self.feature_matrix[:, index], 
+                self.true_matrix[:, index], 
+                self.missing_mask[:, index])
 
     def __len__(self):
-        return self.num_samples
+        return self.num_features
+
+class MissingValueDataset(torch.utils.data.Dataset):
+    def __init__(self, original_dataset, missing_rate=0.2):
+        self.original_dataset = original_dataset
+        self.missing_rate = missing_rate
+
+    def __len__(self):
+        return len(self.original_dataset)
 
     def __getitem__(self, idx):
-        true_matrix, feature_matrix, missing_mask = self.dataset[idx]
-        return feature_matrix, true_matrix, missing_mask
+        img, label = self.original_dataset[idx]
+        
+        # Generate missing mask with the same shape as the original image
+        mask = torch.FloatTensor(img.shape).uniform_() > self.missing_rate
+        
+        # Create missing feature matrix
+        missing_features = img.clone()
+        missing_features[~mask] = float(0)  # Set missing positions to 0.0
+        mask = mask.float()
+        
+        return missing_features, img, mask
 
 def load_data(datasetname, args):
     if datasetname == "synthetic":
-        dataset = SyncDataset(args.num_samples, args.num_nodes, args.rank_k, args.missing_rate)
+        dataset = ColumnwiseDataset(args.num_nodes, args.num_features, args.rank_k, args.missing_rate)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
+    elif datasetname == "cifar10":
+        raw_dataset = torchvision.datasets.CIFAR10('data', train=True, download=True, transform=
+                                                     Compose([ToTensor(), 
+                                                              RandomResizedCrop(32, scale=(args.scale_lo, args.scale_high), ratio=(args.ratio_lo, args.ratio_high)), 
+                                                              transforms.RandomHorizontalFlip(p=args.flip),
+                                                              Normalize(0.5, 0.5)]))
+        dataset = MissingValueDataset(raw_dataset, args.missing_rate)
+        dataloader = torch.utils.data.DataLoader(dataset, args.max_device_batch_size, shuffle=True, num_workers=4,drop_last=True)
     else:
-        raise ValueError("Dataset not found")
+        raise ValueError("未找到数据集")
     
-    train_size = int(args.train_ratio * len(dataset))
-    test_size = len(dataset) - train_size
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
-    
-    return train_dataset, test_dataset
+    return dataloader

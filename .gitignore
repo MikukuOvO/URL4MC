@@ -6,3 +6,6 @@ baselines/lin-rfm/__pycache__/
 baselines/csmc/examples/
 
 dataset/
+wandb/
+data/
+__pycache__/

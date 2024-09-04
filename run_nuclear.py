@@ -8,15 +8,15 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 def inference_batch(input_matrices, missing_masks):
-    batch_size, n_1, n_2 = input_matrices.shape
+    batch_size, c, n_1, n_2 = input_matrices.shape
     completed_matrices = []
 
     for i in tqdm(range(batch_size)):
-        input_matrix = input_matrices[i].cpu().numpy()
-        missing_mask = missing_masks[i].cpu().numpy()
+        input_matrix = input_matrices[i][0].cpu().numpy()
+        missing_mask = missing_masks[i][0].cpu().numpy()
         
         input_matrix = fill_missing_values(input_matrix, missing_mask)
-        omega = np.argwhere(~missing_mask)
+        omega = np.argwhere(1 - missing_mask)
 
         X_ = Variable((n_1 + n_2, n_1 + n_2), PSD=True)
         objective = Minimize(trace(X_))
@@ -28,7 +28,7 @@ def inference_batch(input_matrices, missing_masks):
         problem.solve(solver=CVXOPT)
 
         completed_matrix = X_.value[:n_1, n_1:]
-        completed_matrices.append(completed_matrix)
+        completed_matrices.append(np.expand_dims(completed_matrix, axis=0))
 
     return torch.tensor(np.array(completed_matrices), dtype=torch.float32, device=input_matrices.device)
 
@@ -53,9 +53,9 @@ def main(args):
             predicted_matrices = inference_batch(feature_matrices, missing_masks)
             predicted_matrices = predicted_matrices.to(device)
 
-            mse_loss = criterion(predicted_matrices, feature_matrices)
-            total_mse_loss += mse_loss.item() * feature_matrices.size(0)
-            num_samples += feature_matrices.size(0)
+            mse_loss = criterion(predicted_matrices, true_matrices)
+            total_mse_loss += mse_loss.item() * true_matrices.size(0)
+            num_samples += true_matrices.size(0)
     
     avg_mse_loss = total_mse_loss / num_samples
     print(f"\Average MSE Loss: {avg_mse_loss}")

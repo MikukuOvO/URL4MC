@@ -1,6 +1,11 @@
 synthetic:
-  num_nodes: 7
+  num_nodes: 1024
   rank_k: 2
-  missing_rate: 0.3
-  num_epochs: 20000
+  missing_rate: 0.1
+  num_epochs: 100000
+  num_samples: 10
   train_ratio: 0.7
+  batch_size: 32
+  mask_ratio: 0.75
+  encoder_heads: 3
+  hidden_size: 192
