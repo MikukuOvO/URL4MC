@@ -60,9 +60,13 @@ class ColumnwiseDataset(Dataset):
         self.missing_mask = data['missing_mask']
 
     def __getitem__(self, index):
-        return (self.feature_matrix[:, index], 
-                self.true_matrix[:, index], 
-                self.missing_mask[:, index])
+        data = self.feature_matrix[:, index].reshape(1, 32, 32)
+        # 填充到 3 个通道
+        feature = torch.cat([data, data, data], dim=0)
+        # 对 true_value 和 mask 进行相同操作
+        true_value = torch.cat([self.true_matrix[:, index].reshape(1, 32, 32)] * 3, dim=0)
+        mask = torch.cat([self.missing_mask[:, index].reshape(1, 32, 32)] * 3, dim=0)
+        return (feature, true_value, mask)
 
     def __len__(self):
         return self.num_features
@@ -93,9 +97,9 @@ def load_data(datasetname, args):
         dataset = ColumnwiseDataset(args.num_nodes, args.num_features, args.rank_k, args.missing_rate)
         dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
     elif datasetname == "cifar10":
-        raw_dataset = torchvision.datasets.CIFAR10('data', train=True, download=True, transform=
+        raw_dataset = torchvision.datasets.CIFAR10('dataset', train=True, download=True, transform=
                                                      Compose([ToTensor(), 
-                                                              RandomResizedCrop(32, scale=(args.scale_lo, args.scale_high), ratio=(args.ratio_lo, args.ratio_high)), 
+                                                              RandomResizedCrop(32, scale=(args.scale_lo, args.scale_high), ratio=(args.ratio_lo, args.ratio_high), antialias=True), 
                                                               transforms.RandomHorizontalFlip(p=args.flip),
                                                               Normalize(0.5, 0.5)]))
         dataset = MissingValueDataset(raw_dataset, args.missing_rate)

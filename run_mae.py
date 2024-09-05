@@ -48,7 +48,7 @@ def train(model, optim, data_loader, lr_scheduler, args):
     for epoch in epoch_bar:
         model.train()
         losses = []
-        for data in tqdm(data_loader):
+        for data in data_loader:
             step_count += 1
             feature_vec, true_vec, missing_vec = data
             feature_vec = feature_vec.to(args.device)
@@ -84,7 +84,7 @@ def main(args):
     model = model.to(device)
     optim = torch.optim.AdamW(model.parameters(), lr=args.base_learning_rate * args.batch_size / 256, betas=(0.9, 0.95), weight_decay=args.weight_decay)
     lr_func = lambda epoch: min((epoch + 1) / (args.warmup_epoch + 1e-8), 0.5 * (math.cos(epoch / args.num_epochs * math.pi) + 1))
-    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=lr_func, verbose=True)
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=lr_func, verbose=False)
     optim.zero_grad()
     model = train(model, optim, data_loader, lr_scheduler, args)
     final_mse = evaluate(model, data_loader, args)

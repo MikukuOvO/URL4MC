@@ -1,14 +1,20 @@
 synthetic:
   num_nodes: 1024
   rank_k: 2
-  missing_rate: 0.1
-  num_epochs: 100000
-  num_samples: 10
-  train_ratio: 0.7
-  batch_size: 32
+  num_features: 1000
+  missing_rate: 0.9
+  num_epochs: 10000
+  warmup_epoch: 200
+  patch_size: 4
   mask_ratio: 0.75
-  encoder_heads: 3
-  hidden_size: 192
+  scale_lo: 0.3
+  scale_high: 1.0
+  ratio_lo: 0.75
+  ratio_high: 1.33
+  num_groups: 1
+  flip: 0.5
+  batch_size: 4000
+  max_device_batch_size: 2000
 
 cifar10:
   missing_rate: 0.9
