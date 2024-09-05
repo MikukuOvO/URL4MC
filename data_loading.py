@@ -95,7 +95,7 @@ class MissingValueDataset(torch.utils.data.Dataset):
 def load_data(datasetname, args):
     if datasetname == "synthetic":
         dataset = ColumnwiseDataset(args.num_nodes, args.num_features, args.rank_k, args.missing_rate)
-        dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
+        dataloader = torch.utils.data.DataLoader(dataset, args.max_device_batch_size, shuffle=True, num_workers=4,drop_last=True)
     elif datasetname == "cifar10":
         raw_dataset = torchvision.datasets.CIFAR10('dataset', train=True, download=True, transform=
                                                      Compose([ToTensor(), 

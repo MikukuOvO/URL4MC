@@ -27,7 +27,7 @@ def evaluate(model, data_loader, args):
             mse = nn.MSELoss(reduction='none')(complete_vec, true_vec)
             
             # 对每个样本取平均
-            mse = mse.sum(dim=1) / len(complete_vec[0])
+            mse = mse.view(mse.size(0), -1).mean(dim=1)
             
             total_mse += mse.sum().item()
             num_samples += feature_vec.size(0)

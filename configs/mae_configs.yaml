@@ -1,8 +1,8 @@
 synthetic:
   num_nodes: 1024
   rank_k: 2
-  num_features: 1000
-  missing_rate: 0.9
+  num_features: 5000
+  missing_rate: 0.1
   num_epochs: 10000
   warmup_epoch: 200
   patch_size: 4
